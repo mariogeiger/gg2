@@ -86,7 +86,7 @@ def execute(args):
     dataset = list(chain(*zip(*sets)))
     dataset = dataset[:args.ptr + args.pte]
 
-    x = [load_GG2_images(x) for x, y in tqdm(dataset)]
+    x = [load_GG2_images(x) for x, y in dataset]
     y = torch.tensor([2 * y - 1 for x, y in dataset], dtype=torch.float32).cuda()
     ytr = y[:args.ptr]
     yte = y[args.ptr: args.ptr + args.pte]
@@ -98,7 +98,7 @@ def execute(args):
     jyh = torch.stack([jyh for vis, jyh in x]).cuda()
 
     with torch.no_grad():
-        out0 = torch.cat([f0(vis[i:i+args.bs], jyh[i:i+args.bs]) for i in tqdm(range(0, len(vis), args.bs))])
+        out0 = torch.cat([f0(vis[i:i+args.bs], jyh[i:i+args.bs]) for i in range(0, len(vis), args.bs)])
 
     f = copy.deepcopy(f0)
     optim = torch.optim.SGD(f.parameters(), lr=args.lr, momentum=args.mom)
@@ -112,8 +112,9 @@ def execute(args):
         stop = (time.perf_counter() - t0 > args.train_time)
 
         if step % args.istep == 0 or stop:
-            otr = torch.cat([f(vis[i:i+args.bs], jyh[i:i+args.bs]) - out0[i:i+args.bs] for i in range(0, args.ptr, args.bs)])
-            ote = torch.cat([f(vis[i:i+args.bs], jyh[i:i+args.bs]) - out0[i:i+args.bs] for i in range(args.ptr, args.ptr + args.pte, args.bs)])
+            with torch.no_grad():
+                otr = torch.cat([f(vis[i:i+args.bs], jyh[i:i+args.bs]) - out0[i:i+args.bs] for i in range(0, args.ptr, args.bs)])
+                ote = torch.cat([f(vis[i:i+args.bs], jyh[i:i+args.bs]) - out0[i:i+args.bs] for i in range(args.ptr, args.ptr + args.pte, args.bs)])
 
             dynamics.append({
                 'step': step,
