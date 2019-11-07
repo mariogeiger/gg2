@@ -53,7 +53,7 @@ class GG2(torch.utils.data.Dataset):
 
         log_path = os.path.join(self.root, "train.csv")
         if not os.path.isfile(log_path):
-            print("Download log...")
+            print("Download log...", flush=True)
             data = urllib.request.urlopen(self.url_train_log)
             with open(log_path, 'wb') as f:
                 f.write(data.read())
@@ -76,14 +76,14 @@ class GG2(torch.utils.data.Dataset):
 
         gz_path = os.path.join(self.root, "datapack2.0train.tar.gz")
         if not os.path.isfile(gz_path):
-            print("Download...")
+            print("Download...", flush=True)
             data = urllib.request.urlopen(self.url_train)
             with open(gz_path, 'wb') as f:
                 f.write(data.read())
 
         tar_path = os.path.join(self.root, "datapack2.0train.tar")
         if not os.path.isfile(tar_path):
-            print("Decompress...")
+            print("Decompress...", flush=True)
             import gzip
             import shutil
             with gzip.open(gz_path, 'rb') as f_in:
@@ -92,7 +92,7 @@ class GG2(torch.utils.data.Dataset):
 
         dir_path = os.path.join(self.root, "datapack2.0train")
         if not os.path.isdir(dir_path):
-            print("Extract...")
+            print("Extract...", flush=True)
             import tarfile
             tar = tarfile.open(tar_path)
             tar.extractall(dir_path)

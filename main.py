@@ -120,6 +120,8 @@ def execute(args):
             'loss': loss.item(),
         })
 
+        print("[{:d}] [L={:.2f}]".format(step, loss.item()), flush=True)
+
         if time.perf_counter() - t0 > args.train_time:
             break
 
