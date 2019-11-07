@@ -171,7 +171,7 @@ def main():
     parser.add_argument("--h", type=int, required=True)
 
     parser.add_argument("--alpha", type=float, required=True)
-    parser.add_argument("--bs", type=float, required=True)
+    parser.add_argument("--bs", type=int, required=True)
     parser.add_argument("--lr", type=float, required=True)
     parser.add_argument("--mom", type=float, required=True)
 
