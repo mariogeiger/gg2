@@ -67,6 +67,9 @@ class Model(nn.Module):
 
 
 def execute(args):
+    def loss(yf):
+        return torch.nn.functional.softplus(-args.alpha * yf).mean().div(args.alpha)
+
     dataset = GG2('gg2/', transform=None)
 
     dataset = [(x, y['n_sources']) for x, y in dataset]
@@ -84,7 +87,9 @@ def execute(args):
     dataset = dataset[:args.ptr + args.pte]
 
     x = [load_GG2_images(x) for x, y in tqdm_notebook(dataset)]
-    y = torch.tensor([2 * y - 1 for x, y in dataset], dtype=torch.float32)
+    y = torch.tensor([2 * y - 1 for x, y in dataset], dtype=torch.float32).cuda()
+    ytr = y[:args.ptr]
+    yte = y[args.ptr: args.ptr + args.pte]
 
     torch.manual_seed(args.init_seed)
     f0 = Model(args.L1, args.L2, args.h).cuda()
@@ -103,33 +108,47 @@ def execute(args):
 
     torch.manual_seed(args.batch_seed)
     for step in count():
+
+        stop = (time.perf_counter() - t0 > args.train_time)
+
+        if step % args.istep == 0 or stop:
+            otr = torch.cat([f(vis[i:i+args.bs], jyh[i:i+args.bs]) - out0[i:i+args.bs] for i in range(0, args.ptr, args.bs)])
+            ote = torch.cat([f(vis[i:i+args.bs], jyh[i:i+args.bs]) - out0[i:i+args.bs] for i in range(args.ptr, args.ptr + args.pte, args.bs)])
+
+            dynamics.append({
+                'step': step,
+                'train': {
+                    'loss': args.alpha * loss(ytr * otr).item(),
+                    'err': (ytr * otr <= 0).double().mean().item(),
+                },
+                'test': {
+                    'loss': args.alpha * loss(yte * ote).item(),
+                    'err': (yte * ote <= 0).double().mean().item(),
+                }
+            })
+
+            text = "[{0:d} {2:.0f}s] [train L={1[train][aloss]:.2f} err={1[train][err]:.2f}] [test L={1[test][aloss]:.2f} err={1[test][err]:.2f}]"
+            print(text.format(step, dynamics[-1], time.perf_counter() - t0), flush=True)
+
+            yield {
+                'args': args,
+                'f0': f0.state_dict(),
+                'f': f.state_dict(),
+                'dynamics': dynamics,
+            }
+
+            if stop:
+                break
+
+
         indices = torch.randperm(args.ptr)[:args.bs]
-
-        vis = torch.stack([vis for vis, jyh in (x[i] for i in indices)]).cuda()
-        jyh = torch.stack([jyh for vis, jyh in (x[i] for i in indices)]).cuda()
-
-        out = f(vis, jyh) - out0[indices]
-        loss = torch.nn.functional.softplus(-args.alpha * out * y[indices].cuda()).mean().div(args.alpha)
+        out = f(vis[indices], jyh[indices]) - out0[indices]
 
         optim.zero_grad()
-        loss.backward()
+        loss(out * y[indices]).backward()
         optim.step()
 
-        dynamics.append({
-            'step': step,
-            'loss': loss.item(),
-        })
 
-        print("[{:d}] [L={:.2f}]".format(step, loss.item()), flush=True)
-
-        if time.perf_counter() - t0 > args.train_time:
-            break
-
-    return {
-        'f0': f0.state_dict(),
-        'f': f.state_dict(),
-        'dynamics': dynamics,
-    }
 
 
 
@@ -157,6 +176,7 @@ def main():
     parser.add_argument("--mom", type=float, required=True)
 
     parser.add_argument("--train_time", type=float, required=True)
+    parser.add_argument("--istep", type=int, required=True)
 
     parser.add_argument("--pickle", type=str, required=True)
     args = parser.parse_args()
