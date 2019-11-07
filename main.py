@@ -118,11 +118,11 @@ def execute(args):
             dynamics.append({
                 'step': step,
                 'train': {
-                    'loss': args.alpha * loss(ytr * otr).item(),
+                    'aloss': args.alpha * loss(ytr * otr).item(),
                     'err': (ytr * otr <= 0).double().mean().item(),
                 },
                 'test': {
-                    'loss': args.alpha * loss(yte * ote).item(),
+                    'aloss': args.alpha * loss(yte * ote).item(),
                     'err': (yte * ote <= 0).double().mean().item(),
                 }
             })
