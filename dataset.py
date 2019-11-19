@@ -27,20 +27,22 @@ class GG2(torch.utils.data.Dataset):
         self.root = os.path.expanduser(root)
         self.files = None
         self.data = None
+        self.tar = None
         self.download()
         self.transform = transform
 
 
     def __getitem__(self, index):
         images = self.files[index]
+        files = [self.tar.extractfile(self.tar.getmember(x)) for x in images]
         ID = int(images[0].split('-')[-1].split('.')[0])
 
         if self.transform:
-            images = self.transform(images)
+            files = self.transform(files)
 
         labels = self.data[ID]
 
-        return images, labels
+        return files, labels
 
 
     def __len__(self):
@@ -90,16 +92,12 @@ class GG2(torch.utils.data.Dataset):
                 with open(tar_path, 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
-        dir_path = os.path.join(self.root, "datapack2.0train")
-        if not os.path.isdir(dir_path):
-            print("Extract...", flush=True)
-            import tarfile
-            tar = tarfile.open(tar_path)
-            tar.extractall(dir_path)
-            tar.close()
+        print("Open tar...", flush=True)
+        import tarfile
+        self.tar = tarfile.open(tar_path)
 
         self.files = list(zip(*(
-            sorted(glob.glob(os.path.join(dir_path, "Public/{}/*.fits".format(band))))
+            sorted([x for x in self.tar.getnames() if '.fits' in x and band in x])
             for band in ("EUC_VIS", "EUC_J", "EUC_Y", "EUC_H")
         )))
         assert all(len({x.split('-')[-1] for x in fs}) == 1 for fs in self.files)
