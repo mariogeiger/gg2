@@ -12,10 +12,13 @@ def load_GG2_images(images):
     images = [fits.open(file, memmap=False)[0].data for file in images]
     images = [torch.from_numpy(x.byteswap().newbyteorder()) for x in images]
 
+    # normalize the second moment of the channels to 1
     normalize = [3.5239e+10, 1.5327e+09, 1.8903e+09, 1.2963e+09]
     images = [x.mul(n) for x, n in zip(images, normalize)]
 
-    return images[0].unsqueeze(0), torch.stack(images[1:])
+    # stack the 3 channels of small resolution together
+    vis, j, y, h = images
+    return vis[None], torch.stack([j, y, h])
 
 
 class GG2(torch.utils.data.Dataset):
