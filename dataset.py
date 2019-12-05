@@ -2,7 +2,6 @@ import csv
 import glob
 import math
 import os
-import pickle
 
 import torch
 from astropy.io import fits
@@ -24,26 +23,28 @@ class GG2(torch.utils.data.Dataset):
     url_train_log = 'http://metcalf1.difa.unibo.it/DATA3/image_catalog2.0train.csv'
 
 
-    def __init__(self, root, transform=load_GG2_images):
+    def __init__(self, root, transform=load_GG2_images, target_transform=None):
         self.root = os.path.expanduser(root)
         self.files = None
         self.data = None
-        self.tar = None
         self.download()
         self.transform = transform
+        self.target_transform = target_transform
 
 
     def __getitem__(self, index):
         images = self.files[index]
-        files = [self.tar.extractfile(self.tar.getmember(x)) for x in images]
         ID = int(images[0].split('-')[-1].split('.')[0])
 
         if self.transform:
-            files = self.transform(files)
+            images = self.transform(images)
 
         labels = self.data[ID]
 
-        return files, labels
+        if self.target_transform:
+            labels = self.target_transform(labels)
+
+        return images, labels
 
 
     def __len__(self):
@@ -93,19 +94,16 @@ class GG2(torch.utils.data.Dataset):
                 with open(tar_path, 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
-        print("Open tar...", flush=True)
-        import tarfile
-        self.tar = tarfile.open(tar_path)
+        dir_path = os.path.join(self.root, "datapack2.0train")
+        if not os.path.isdir(dir_path):
+            print("Extract...", flush=True)
+            import tarfile
+            tar = tarfile.open(tar_path)
+            tar.extractall(dir_path)
+            tar.close()
 
-        index_path = os.path.join(self.root, "index.pkl")
-        if not os.path.isfile(index_path):
-            files = list(zip(*(
-                sorted([x for x in self.tar.getnames() if '.fits' in x and band in x])
-                for band in ("EUC_VIS", "EUC_J", "EUC_Y", "EUC_H")
-            )))
-            with open(index_path, 'wb') as f:
-                pickle.dump(files, f)
-
-        with open(index_path, 'rb') as f:
-            self.files = pickle.load(f)
+        self.files = list(zip(*(
+            sorted(glob.glob(os.path.join(dir_path, "Public/{}/*.fits".format(band))))
+            for band in ("EUC_VIS", "EUC_J", "EUC_Y", "EUC_H")
+        )))
         assert all(len({x.split('-')[-1] for x in fs}) == 1 for fs in self.files)
