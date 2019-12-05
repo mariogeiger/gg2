@@ -2,6 +2,7 @@ import csv
 import glob
 import math
 import os
+import pickle
 
 import torch
 from astropy.io import fits
@@ -96,8 +97,15 @@ class GG2(torch.utils.data.Dataset):
         import tarfile
         self.tar = tarfile.open(tar_path)
 
-        self.files = list(zip(*(
-            sorted([x for x in self.tar.getnames() if '.fits' in x and band in x])
-            for band in ("EUC_VIS", "EUC_J", "EUC_Y", "EUC_H")
-        )))
+        index_path = os.path.join(self.root, "index.pkl")
+        if not os.path.isfile(index_path):
+            files = list(zip(*(
+                sorted([x for x in self.tar.getnames() if '.fits' in x and band in x])
+                for band in ("EUC_VIS", "EUC_J", "EUC_Y", "EUC_H")
+            )))
+            with open(index_path, 'wb') as f:
+                pickle.dump(files, f)
+
+        with open(index_path, 'rb') as f:
+            self.files = pickle.load(f)
         assert all(len({x.split('-')[-1] for x in fs}) == 1 for fs in self.files)
