@@ -40,7 +40,7 @@ class GG2(torch.utils.data.Dataset):
     url_train_log = 'http://metcalf1.difa.unibo.it/DATA3/image_catalog2.0train.csv'
 
 
-    def __init__(self, root, transform=load_GG2_images, target_transform=None):
+    def __init__(self, root, transform=None, target_transform=None):
         self.root = os.path.expanduser(root)
         self.files = None
         self.data = None
