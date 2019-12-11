@@ -52,7 +52,7 @@ def execute(args):
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.bs, num_workers=2)
 
     torch.manual_seed(args.init_seed)
-    f = torch.hub.load('rwightman/gen-efficientnet-pytorch', 'efficientnet_b0', pretrained=True)
+    f = torch.hub.load(args.github, args.model, pretrained=True)
     f.conv_stem = torch.nn.Conv2d(4, 32, kernel_size=3, stride=2, padding=1, bias=False)
     f.classifier = torch.nn.Linear(1280, 1)
     f.to(args.device)
@@ -61,8 +61,8 @@ def execute(args):
     criterion = nn.SoftMarginLoss()
     optimizer = torch.optim.SGD(f.parameters(), lr=args.lr, momentum=args.mom)
 
-    for epoch in tqdm.tqdm(range(args.epoch)):
-        t = tqdm.tqdm(total=len(trainloader), desc='training')
+    for epoch in range(args.epoch):
+        t = tqdm.tqdm(total=len(trainloader), desc='training epoch {}'.format(epoch + 1))
         for x, y in trainloader:
             x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
 
@@ -85,7 +85,7 @@ def execute(args):
         with torch.no_grad():
             ote = []
             yte = []
-            for x, y in tqdm.tqdm(testloader, desc='testing'):
+            for x, y in tqdm.tqdm(testloader, desc='testing epoch {}'.format(epoch + 1)):
                 x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
                 f.eval()
                 ote += [f(x).flatten()]
@@ -116,6 +116,9 @@ def main():
     parser.add_argument("--epoch", type=int, required=True)
     parser.add_argument("--device", type=str, required=True)
     parser.add_argument("--root", type=str, required=True)
+
+    parser.add_argument("--github", type=str, default='rwightman/gen-efficientnet-pytorch')
+    parser.add_argument("--model", type=str, default='efficientnet_b0')
 
     parser.add_argument("--pickle", type=str, required=True)
     args = parser.parse_args()
