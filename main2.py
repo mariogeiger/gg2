@@ -18,7 +18,7 @@ from utils import BalancedBatchSampler, RunningOp
 def execute(args):
     # define model
     torch.manual_seed(args.init_seed)
-    f = torch.hub.load(args.github, args.model, pretrained=True)
+    f = torch.hub.load(args.github, args.model, pretrained=args.pretrained)
     f.conv_stem = torch.nn.Conv2d(4, 32, kernel_size=3, stride=2, padding=1, bias=False)
     f.classifier = torch.nn.Linear(1280, 1)
     f.to(args.device)
@@ -117,6 +117,7 @@ def main():
 
     parser.add_argument("--github", type=str, default='rwightman/gen-efficientnet-pytorch')
     parser.add_argument("--model", type=str, default='efficientnet_b0')
+    parser.add_argument("--pretrained", type=int, default=1)
 
     parser.add_argument("--pickle", type=str, required=True)
     args = parser.parse_args()
