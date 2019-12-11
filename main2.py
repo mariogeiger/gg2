@@ -39,30 +39,53 @@ def target_transform(prop):
 
 
 def execute(args):
-    dataset = GG2(args.root, transform=image_transform, target_transform=target_transform)
-    print("{} images in total".format(len(dataset)))
-
-    torch.manual_seed(args.data_seed)
-    trainset, testset, _ = torch.utils.data.random_split(dataset, (args.ntr, args.nte, len(dataset) - args.ntr - args.nte))
-
-    dummy_trainset = copy.deepcopy(trainset)
-    dummy_trainset.dataset.transform = None
-
-    trainloader = torch.utils.data.DataLoader(trainset, sampler=BalancedBatchSampler(dummy_trainset), batch_size=args.bs, num_workers=2)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=args.bs, num_workers=2)
-
+    # define model
     torch.manual_seed(args.init_seed)
     f = torch.hub.load(args.github, args.model, pretrained=True)
     f.conv_stem = torch.nn.Conv2d(4, 32, kernel_size=3, stride=2, padding=1, bias=False)
     f.classifier = torch.nn.Linear(1280, 1)
     f.to(args.device)
 
+    # evaluation
+    def evaluate(dataset, desc):
+        loader = torch.utils.data.DataLoader(dataset, batch_size=args.bs, num_workers=2)
+
+        with torch.no_grad():
+            ote = []
+            yte = []
+            for x, y in tqdm.tqdm(loader, desc=desc):
+                x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
+                f.eval()
+                ote += [f(x).flatten()]
+                yte += [y]
+
+        return {
+            'output': torch.cat(ote).cpu(),
+            'labels': torch.cat(yte).cpu(),
+        }
+
+    # criterion and optimizer
     torch.manual_seed(args.batch_seed)
     criterion = nn.SoftMarginLoss()
     optimizer = torch.optim.SGD(f.parameters(), lr=args.lr, momentum=args.mom)
 
+    # datasets
+    dataset = GG2(args.root, transform=image_transform, target_transform=target_transform)
+    print("{} images in total".format(len(dataset)))
+
+    torch.manual_seed(args.data_seed)
+    trainset, testset, _ = torch.utils.data.random_split(dataset, (args.ntr, args.nte, len(dataset) - args.ntr - args.nte))
+
+    # training
+    dummy_trainset = copy.deepcopy(trainset)
+    dummy_trainset.dataset.transform = None
+
+    trainloader = torch.utils.data.DataLoader(trainset, sampler=BalancedBatchSampler(dummy_trainset), batch_size=args.bs, num_workers=2)
+
+    results = []
+
     for epoch in range(args.epoch):
-        t = tqdm.tqdm(total=len(trainloader), desc='training epoch {}'.format(epoch + 1))
+        t = tqdm.tqdm(total=len(trainloader), desc='[epoch {}] training'.format(epoch + 1))
         for x, y in trainloader:
             x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
 
@@ -82,21 +105,16 @@ def execute(args):
 
         t.close()
 
-        with torch.no_grad():
-            ote = []
-            yte = []
-            for x, y in tqdm.tqdm(testloader, desc='testing epoch {}'.format(epoch + 1)):
-                x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
-                f.eval()
-                ote += [f(x).flatten()]
-                yte += [y]
-            yield {
-                'args': args,
-                'test': {
-                    'output': torch.cat(ote),
-                    'labels': torch.cat(yte),
-                }
-            }
+        results += [{
+            'epoch': epoch,
+            'train': evaluate(trainset, '[epoch {}] eval trainset'.format(epoch + 1)),
+            'test': evaluate(testset, '[epoch {}] eval testset'.format(epoch + 1)),
+        }]
+
+        yield {
+            'args': args,
+            'epochs': results,
+        }
 
 
 def main():
