@@ -108,6 +108,7 @@ def execute(args):
             t.set_postfix({
                 'loss': args.alpha * loss.item(),
                 'acc': (out * y > 0).double().mean().item(),
+                'dd': out.abs().max().item(),
             })
 
         t.close()
