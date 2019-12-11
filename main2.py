@@ -33,7 +33,7 @@ def image_transform(images):
 
 
 def target_transform(prop):
-    if prop['n_sources'] > 0:
+    if prop['n_sources'] > 0 and prop['mag_eff'] > 1.5:
         return 1.0
     return -1.0
 
