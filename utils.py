@@ -1,6 +1,8 @@
 import random
 from collections import defaultdict
 
+import torch
+
 
 class RunningOp:
     def __init__(self, n, op):
