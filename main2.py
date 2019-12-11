@@ -45,6 +45,7 @@ def execute(args):
     f.conv_stem = torch.nn.Conv2d(4, 32, kernel_size=3, stride=2, padding=1, bias=False)
     f.classifier = torch.nn.Linear(1280, 1)
     f.to(args.device)
+    f.eval()
     f0 = copy.deepcopy(f)
 
     # evaluation
@@ -57,6 +58,7 @@ def execute(args):
             for x, y in tqdm.tqdm(loader, desc=desc):
                 x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
                 f.eval()
+                f0.eval()
                 ote += [(f(x) - f0(x)).flatten()]
                 yte += [y]
 
@@ -92,7 +94,6 @@ def execute(args):
             x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
 
             # f.train()
-            f.eval()
             out = f(x).flatten()
             with torch.no_grad():
                 out0 = f0(x).flatten()
