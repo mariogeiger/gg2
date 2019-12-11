@@ -63,9 +63,9 @@ def execute(args):
     results = []
     torch.manual_seed(args.batch_seed)
 
-    avg_loss = RunningOp(100, lambda x: sum(x) / len(x))
-    avg_acc = RunningOp(100, lambda x: sum(x) / len(x))
-    max_dd = RunningOp(100, max)
+    avg_loss = RunningOp(1000 // args.bs, lambda x: sum(x) / len(x))
+    avg_acc = RunningOp(1000 // args.bs, lambda x: sum(x) / len(x))
+    max_dd = RunningOp(1000 // args.bs, max)
 
     for epoch in range(args.epoch):
         t = tqdm.tqdm(total=len(trainloader), desc='[epoch {}] training'.format(epoch + 1))
