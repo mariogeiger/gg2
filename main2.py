@@ -45,6 +45,7 @@ def execute(args):
     f.conv_stem = torch.nn.Conv2d(4, 32, kernel_size=3, stride=2, padding=1, bias=False)
     f.classifier = torch.nn.Linear(1280, 1)
     f.to(args.device)
+    f0 = copy.deepcopy(f)
 
     # evaluation
     def evaluate(dataset, desc):
@@ -56,7 +57,7 @@ def execute(args):
             for x, y in tqdm.tqdm(loader, desc=desc):
                 x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
                 f.eval()
-                ote += [f(x).flatten()]
+                ote += [(f(x) - f0(x)).flatten()]
                 yte += [y]
 
         return {
@@ -93,7 +94,9 @@ def execute(args):
             # f.train()
             f.eval()
             out = f(x).flatten()
-            loss = criterion(out, y)
+            with torch.no_grad():
+                out -= f0(x).flatten()
+            loss = criterion(args.alpha * out, y) / args.alpha
 
             optimizer.zero_grad()
             loss.backward()
@@ -133,6 +136,7 @@ def main():
     parser.add_argument("--bs", type=int, required=True)
     parser.add_argument("--lr", type=float, required=True)
     parser.add_argument("--mom", type=float, required=True)
+    parser.add_argument("--alpha", type=float, required=True)
 
     parser.add_argument("--epoch", type=int, required=True)
     parser.add_argument("--device", type=str, required=True)
