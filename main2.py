@@ -95,7 +95,8 @@ def execute(args):
             f.eval()
             out = f(x).flatten()
             with torch.no_grad():
-                out -= f0(x).flatten()
+                out0 = f0(x).flatten()
+            out = out - out0
             loss = criterion(args.alpha * out, y) / args.alpha
 
             optimizer.zero_grad()
