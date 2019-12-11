@@ -106,7 +106,7 @@ def execute(args):
 
             t.update(1)
             t.set_postfix({
-                'loss': loss.item(),
+                'loss': args.alpha * loss.item(),
                 'acc': (out * y > 0).double().mean().item(),
             })
 
