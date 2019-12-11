@@ -55,7 +55,7 @@ def execute(args):
             yte = []
             for x, y in tqdm.tqdm(loader, desc=desc):
                 x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
-                f.eval()
+                f.train()
                 ote += [f(x).flatten()]
                 yte += [y]
 
