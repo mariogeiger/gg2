@@ -8,21 +8,11 @@ from itertools import chain, count
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from astropy.io import fits
 import tqdm
+from astropy.io import fits
 
-from dataset import GG2, BalancedBatchSampler, image_transform, target_transform
-
-
-class RunningAvg:
-    def __init__(self, n):
-        self.x = []
-        self.n = n
-
-    def __call__(self, x):
-        self.x.append(x)
-        self.x = self.x[-self.n:]
-        return sum(self.x) / len(self.x)
+from dataset import GG2, image_transform, target_transform
+from utils import BalancedBatchSampler, RunningOp
 
 
 def execute(args):
@@ -73,8 +63,9 @@ def execute(args):
     results = []
     torch.manual_seed(args.batch_seed)
 
-    avg_loss = RunningAvg(100)
-    avg_acc = RunningAvg(100)
+    avg_loss = RunningOp(100, lambda x: sum(x) / len(x))
+    avg_acc = RunningOp(100, lambda x: sum(x) / len(x))
+    max_dd = RunningOp(100, max)
 
     for epoch in range(args.epoch):
         t = tqdm.tqdm(total=len(trainloader), desc='[epoch {}] training'.format(epoch + 1))
@@ -95,7 +86,7 @@ def execute(args):
             t.set_postfix_str("loss={0[loss]:.2f} acc={0[acc]:.2f} dd={0[dd]:.3f}".format({
                 'loss': avg_loss(args.alpha * loss.item()),
                 'acc': avg_acc((out * y > 0).double().mean().item()),
-                'dd': out.abs().max().item(),
+                'dd': max_dd(out.abs().max().item()),
             }))
 
         t.close()

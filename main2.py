@@ -8,10 +8,11 @@ from itertools import chain, count
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from astropy.io import fits
 import tqdm
+from astropy.io import fits
 
-from dataset import GG2, BalancedBatchSampler, image_transform, target_transform
+from dataset import GG2, image_transform, target_transform
+from utils import BalancedBatchSampler, RunningOp
 
 
 def execute(args):
@@ -60,6 +61,9 @@ def execute(args):
     results = []
     torch.manual_seed(args.batch_seed)
 
+    avg_loss = RunningOp(100, lambda x: sum(x) / len(x))
+    avg_acc = RunningOp(100, lambda x: sum(x) / len(x))
+
     for epoch in range(args.epoch):
         t = tqdm.tqdm(total=len(trainloader), desc='[epoch {}] training'.format(epoch + 1))
         for x, y in trainloader:
@@ -75,8 +79,8 @@ def execute(args):
 
             t.update(1)
             t.set_postfix_str("loss={0[loss]:.2f} acc={0[acc]:.2f}".format({
-                'loss': args.alpha * loss.item(),
-                'acc': (out * y > 0).double().mean().item(),
+                'loss': avg_loss(args.alpha * loss.item()),
+                'acc': avg_acc((out * y > 0).double().mean().item()),
             }))
 
         t.close()
