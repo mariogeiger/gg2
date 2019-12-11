@@ -14,6 +14,17 @@ import tqdm
 from dataset import GG2, BalancedBatchSampler, image_transform, target_transform
 
 
+class RunningAvg:
+    def __init__(self, n):
+        self.x = []
+        self.n = n
+
+    def __call__(self, x):
+        self.x.append(x)
+        self.x = self.x[-self.n:]
+        return sum(self.x) / len(self.x)
+
+
 def execute(args):
     # define model
     torch.manual_seed(args.init_seed)
@@ -62,6 +73,9 @@ def execute(args):
     results = []
     torch.manual_seed(args.batch_seed)
 
+    avg_loss = RunningAvg(100)
+    avg_acc = RunningAvg(100)
+
     for epoch in range(args.epoch):
         t = tqdm.tqdm(total=len(trainloader), desc='[epoch {}] training'.format(epoch + 1))
         for x, y in trainloader:
@@ -79,8 +93,8 @@ def execute(args):
 
             t.update(1)
             t.set_postfix_str("loss={0[loss]:.2f} acc={0[acc]:.2f} dd={0[dd]:.3f}".format({
-                'loss': args.alpha * loss.item(),
-                'acc': (out * y > 0).double().mean().item(),
+                'loss': avg_loss(args.alpha * loss.item()),
+                'acc': avg_acc((out * y > 0).double().mean().item()),
                 'dd': out.abs().max().item(),
             }))
 
