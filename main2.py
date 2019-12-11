@@ -114,6 +114,7 @@ def execute(args):
         yield {
             'args': args,
             'epochs': results,
+            'state': f.state_dict(),
         }
 
 
