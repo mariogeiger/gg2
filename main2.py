@@ -79,7 +79,7 @@ def execute(args):
 
             t.update(1)
             t.set_postfix_str("loss={0[loss]:.2f} acc={0[acc]:.2f}".format({
-                'loss': avg_loss(args.alpha * loss.item()),
+                'loss': avg_loss(loss.item()),
                 'acc': avg_acc((out * y > 0).double().mean().item()),
             }))
 
