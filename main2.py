@@ -65,7 +65,6 @@ def execute(args):
         }
 
     # criterion and optimizer
-    torch.manual_seed(args.batch_seed)
     criterion = nn.SoftMarginLoss()
     optimizer = torch.optim.SGD(f.parameters(), lr=args.lr, momentum=args.mom)
 
@@ -77,12 +76,14 @@ def execute(args):
     trainset, testset, _ = torch.utils.data.random_split(dataset, (args.ntr, args.nte, len(dataset) - args.ntr - args.nte))
 
     # training
-    dummy_trainset = copy.deepcopy(trainset)
-    dummy_trainset.dataset.transform = None
+    # dummy_trainset = copy.deepcopy(trainset)
+    # dummy_trainset.dataset.transform = None
 
-    trainloader = torch.utils.data.DataLoader(trainset, sampler=BalancedBatchSampler(dummy_trainset), batch_size=args.bs, num_workers=2)
+    # trainloader = torch.utils.data.DataLoader(trainset, sampler=BalancedBatchSampler(dummy_trainset), batch_size=args.bs, drop_last=True, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(trainset, shuffle=True, batch_size=args.bs, drop_last=True, num_workers=2)
 
     results = []
+    torch.manual_seed(args.batch_seed)
 
     for epoch in range(args.epoch):
         t = tqdm.tqdm(total=len(trainloader), desc='[epoch {}] training'.format(epoch + 1))
