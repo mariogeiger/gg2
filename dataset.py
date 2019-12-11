@@ -11,7 +11,7 @@ from astropy.io import fits
 from six.moves import urllib
 
 
-def load_GG2_images(images):
+def image_transform(images):
     images = [fits.open(file, memmap=False)[0].data for file in images]
     images = [torch.from_numpy(x.byteswap().newbyteorder()) for x in images]
 
@@ -21,7 +21,18 @@ def load_GG2_images(images):
 
     # stack the 3 channels of small resolution together
     vis, j, y, h = images
-    return vis[None], torch.stack([j, y, h])
+    vis, jyh = vis[None], torch.stack([j, y, h])
+
+    upsample = torch.nn.Upsample(200, mode='bilinear', align_corners=True)
+    jyh = upsample(jyh[None])[0]
+
+    return torch.cat([vis, jyh])
+
+
+def target_transform(prop):
+    if prop['n_sources'] > 0 and prop['mag_eff'] > 1.5:
+        return 1.0
+    return -1.0
 
 
 class GG2(torch.utils.data.Dataset):
