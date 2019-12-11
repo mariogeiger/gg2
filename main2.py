@@ -76,11 +76,11 @@ def execute(args):
     trainset, testset, _ = torch.utils.data.random_split(dataset, (args.ntr, args.nte, len(dataset) - args.ntr - args.nte))
 
     # training
-    # dummy_trainset = copy.deepcopy(trainset)
-    # dummy_trainset.dataset.transform = None
+    dummy_trainset = copy.deepcopy(trainset)
+    dummy_trainset.dataset.transform = None
 
-    # trainloader = torch.utils.data.DataLoader(trainset, sampler=BalancedBatchSampler(dummy_trainset), batch_size=args.bs, drop_last=True, num_workers=2)
-    trainloader = torch.utils.data.DataLoader(trainset, shuffle=True, batch_size=args.bs, drop_last=True, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(trainset, sampler=BalancedBatchSampler(dummy_trainset), batch_size=args.bs, drop_last=True, num_workers=2)
+    # trainloader = torch.utils.data.DataLoader(trainset, shuffle=True, batch_size=args.bs, drop_last=True, num_workers=2)
 
     results = []
     torch.manual_seed(args.batch_seed)
@@ -90,7 +90,8 @@ def execute(args):
         for x, y in trainloader:
             x, y = x.to(args.device), y.to(dtype=x.dtype, device=args.device)
 
-            f.train()
+            # f.train()
+            f.eval()
             out = f(x).flatten()
             loss = criterion(out, y)
 
