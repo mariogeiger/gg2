@@ -78,11 +78,11 @@ def execute(args):
             optimizer.step()
 
             t.update(1)
-            t.set_postfix({
+            t.set_postfix_str("loss={0[loss]:.2f} acc={0[acc]:.2f} dd={0[dd]:.3f}".format({
                 'loss': args.alpha * loss.item(),
                 'acc': (out * y > 0).double().mean().item(),
-                'dd': out.abs().max(),
-            })
+                'dd': out.abs().max().item(),
+            }))
 
         t.close()
 
