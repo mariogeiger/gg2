@@ -110,7 +110,7 @@ class GG2(torch.utils.data.Dataset):
             # Total size in bytes.
             total_size = int(r.headers.get('content-length', 0))
             block_size = 1024  # 1 Kibibyte
-            t = tqdm(total=total_size, unit='iB', unit_scale=True)
+            t = tqdm(total=total_size, unit='iB', unit_scale=True, desc="Download")
             with open(gz_path, 'wb') as f:
                 for data in r.iter_content(block_size):
                     t.update(len(data))
@@ -119,14 +119,13 @@ class GG2(torch.utils.data.Dataset):
 
         tar_path = os.path.join(self.root, "{}.tar".format(name))
         if not os.path.isfile(tar_path):
-            print("Decompress...", flush=True)
             import gzip
             with gzip.open(gz_path, 'rb') as f_in:
                 f_in.seek(0, 2)
                 total_size = f_in.tell()
                 f_in.seek(0, 0)
                 block_size = 1024  # 1 Kibibyte
-                t = tqdm(total=total_size, unit='iB', unit_scale=True)
+                t = tqdm(total=total_size, unit='iB', unit_scale=True, desc="Decompress")
                 with open(tar_path, 'wb') as f_out:
                     while True:
                         data = f_in.read(block_size)
@@ -137,7 +136,6 @@ class GG2(torch.utils.data.Dataset):
 
         dir_path = os.path.join(self.root, name)
         if not os.path.isdir(dir_path):
-            print("Extract...", flush=True)
             import tarfile
             tar = tarfile.open(tar_path)
             tar.extractall(dir_path)
