@@ -57,6 +57,9 @@ class GG2(torch.utils.data.Dataset):
         if self.transform:
             images = self.transform(images)
 
+        if self.data is None:
+            return images
+
         labels = self.data[ID]
 
         if self.target_transform:
